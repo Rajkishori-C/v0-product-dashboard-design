@@ -10,6 +10,7 @@ export interface ReviewData {
   date?: string
   sentiment?: "positive" | "negative" | "neutral"
   confidence?: number
+  reviewer?: string
 }
 
 export interface ProcessedData {
@@ -227,17 +228,53 @@ export async function processExcelFile(file: File): Promise<ProcessedData> {
         const worksheet = workbook.Sheets[sheetName]
         const jsonData = XLSX.utils.sheet_to_json(worksheet)
 
-        // Convert to ReviewData format
-        const reviews: ReviewData[] = jsonData.map((row: any, index) => ({
-          id: `review-${index}`,
-          review: row.review || row.Review || row.comment || row.Comment || row.feedback || row.Feedback || "",
-          rating: row.rating || row.Rating || row.score || row.Score || undefined,
-          category: row.category || row.Category || undefined,
-          date: row.date || row.Date || undefined,
-        }))
+        const reviews: ReviewData[] = jsonData.map((row: any, index) => {
+          // Handle Amazon reviews format - Column H is "Review Text Detail"
+          const reviewText =
+            row["Review Text Detail"] || // Column H - Amazon format
+            row["Review Text"] ||
+            row["review"] ||
+            row["Review"] ||
+            row["comment"] ||
+            row["Comment"] ||
+            row["feedback"] ||
+            row["Feedback"] ||
+            row["text"] ||
+            row["Text"] ||
+            ""
 
-        // Filter out empty reviews
-        const validReviews = reviews.filter((review) => review.review.trim().length > 0)
+          // Extract rating from "Rating" column (Column F)
+          const rating = row["Rating"] || row["rating"] || row["Score"] || row["score"] || undefined
+
+          // Extract reviewer name from Column A
+          const reviewerName = row["Reviewer Name"] || row["Name"] || row["reviewer"] || ""
+
+          // Extract date from "Review Date" column (Column E)
+          const reviewDate = row["Review Date"] || row["Date"] || row["date"] || undefined
+
+          return {
+            id: `review-${index}`,
+            review: reviewText,
+            rating: rating ? Number.parseFloat(rating.toString().replace(/[^\d.]/g, "")) : undefined,
+            category: row["Category"] || row["category"] || "General",
+            date: reviewDate,
+            reviewer: reviewerName,
+          }
+        })
+
+        const validReviews = reviews.filter((review) => {
+          const hasValidText = review.review && review.review.trim().length > 10 // Minimum 10 characters
+          return hasValidText
+        })
+
+        if (validReviews.length === 0) {
+          reject(
+            new Error(
+              "No valid reviews found. Please ensure your Excel file has a 'Review Text Detail' column with review content.",
+            ),
+          )
+          return
+        }
 
         const reviewsWithSentiment = validReviews.map((review) => {
           const sentimentResult = analyzeSentimentAdvanced(review.review)
@@ -284,7 +321,11 @@ export async function processExcelFile(file: File): Promise<ProcessedData> {
           categoryKeywords,
         })
       } catch (error) {
-        reject(new Error("Failed to process Excel file. Please ensure it contains review data."))
+        reject(
+          new Error(
+            "Failed to process Excel file. Please ensure it contains Amazon review data with 'Review Text Detail' column.",
+          ),
+        )
       }
     }
 

@@ -9,7 +9,7 @@ import { AISuggestions } from "@/components/ai-suggestions"
 import { ReviewDetails } from "@/components/review-details"
 import { UploadModal } from "@/components/upload-modal"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Upload, FileSpreadsheet, Loader2 } from "lucide-react"
+import { Upload, FileSpreadsheet, Loader2, Users, Star } from "lucide-react"
 import { processExcelFile, type ProcessedData } from "@/lib/excel-processor"
 import { generateAISuggestions } from "@/lib/ai-suggestions"
 import { useToast } from "@/hooks/use-toast"
@@ -188,7 +188,9 @@ export default function DashboardPage() {
   const handleFileUpload = async (file: File) => {
     setIsProcessing(true)
     try {
+      console.log("[v0] Starting file processing...")
       const data = await processExcelFile(file)
+      console.log("[v0] File processed, generating suggestions...")
       const suggestions = generateAISuggestions(data)
       const enhancedKeywords = extractAdvancedKeywords(data.reviews)
 
@@ -196,13 +198,23 @@ export default function DashboardPage() {
       setHasData(true)
 
       toast({
-        title: "File processed successfully!",
-        description: `Analyzed ${data.stats.totalReviews} reviews and generated ${suggestions.length} AI suggestions.`,
+        title: "Amazon Reviews Processed Successfully!",
+        description: `Analyzed ${data.stats.totalReviews} reviews, extracted ${data.enhancedKeywords.length} keywords, and generated ${suggestions.suggestions.length} AI suggestions.`,
+      })
+
+      console.log("[v0] Processing complete:", {
+        totalReviews: data.stats.totalReviews,
+        keywordsExtracted: data.enhancedKeywords.length,
+        suggestionsGenerated: suggestions.suggestions.length,
       })
     } catch (error) {
+      console.log("[v0] Error processing file:", error)
       toast({
-        title: "Error processing file",
-        description: error instanceof Error ? error.message : "Please check your file format and try again.",
+        title: "Error processing Excel file",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Please ensure your Excel file has the correct Amazon reviews format.",
         variant: "destructive",
       })
     } finally {
@@ -214,8 +226,8 @@ export default function DashboardPage() {
     setSelectedWord(word)
     setShowReviewDetails(true)
     toast({
-      title: "Word Analysis",
-      description: `Showing reviews containing "${word}".`,
+      title: "Keyword Analysis",
+      description: `Showing reviews containing "${word}" with sentiment analysis.`,
     })
   }
 
@@ -233,19 +245,65 @@ export default function DashboardPage() {
           <div className="space-y-8">
             <div className="flex items-center justify-between">
               <div>
-                <h1 className="text-3xl font-bold mb-2">Review Analytics Dashboard</h1>
+                <h1 className="text-3xl font-bold mb-2">Amazon Review Analytics Dashboard</h1>
                 <p className="text-muted-foreground">
                   {processedData
-                    ? "AI-powered insights from your uploaded data"
-                    : "AI-powered insights from sample data"}
+                    ? "AI-powered insights from your uploaded Amazon reviews data"
+                    : "AI-powered insights from sample Amazon reviews data"}
                 </p>
               </div>
               {processedData && (
-                <div className="text-sm text-muted-foreground">Data from: {processedData.reviews.length} reviews</div>
+                <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                  <div className="flex items-center gap-1">
+                    <Users className="w-4 h-4" />
+                    <span>{processedData.reviews.length} reviews</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Star className="w-4 h-4" />
+                    <span>{currentStats.averageRating.toFixed(1)} avg rating</span>
+                  </div>
+                </div>
               )}
             </div>
 
             <DashboardStats stats={currentStats} />
+
+            {processedData && (
+              <Card className="glow-card border-border/50 bg-card/50 backdrop-blur-sm">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <FileSpreadsheet className="w-5 h-5 text-primary" />
+                    Data Processing Summary
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                    <div>
+                      <p className="text-muted-foreground">Keywords Extracted</p>
+                      <p className="font-semibold text-lg">{processedData.enhancedKeywords.length}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Positive Sentiment</p>
+                      <p className="font-semibold text-lg text-green-500">
+                        {Math.round((currentStats.positiveReviews / currentStats.totalReviews) * 100)}%
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Negative Sentiment</p>
+                      <p className="font-semibold text-lg text-red-500">
+                        {Math.round((currentStats.negativeReviews / currentStats.totalReviews) * 100)}%
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Neutral Sentiment</p>
+                      <p className="font-semibold text-lg text-purple-500">
+                        {Math.round((currentStats.neutralReviews / currentStats.totalReviews) * 100)}%
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             <div className="grid lg:grid-cols-2 gap-8">
               <SentimentChart data={currentChartData} />
@@ -275,11 +333,11 @@ export default function DashboardPage() {
                     <FileSpreadsheet className="w-8 h-8 text-primary" />
                   )}
                 </div>
-                <CardTitle>{isProcessing ? "Processing..." : "No Data Available"}</CardTitle>
+                <CardTitle>{isProcessing ? "Processing Amazon Reviews..." : "No Data Available"}</CardTitle>
                 <CardDescription>
                   {isProcessing
-                    ? "Analyzing your review data with AI"
-                    : "Upload your review data to start analyzing customer feedback"}
+                    ? "Extracting keywords and analyzing sentiment from your review data"
+                    : "Upload your Amazon reviews Excel file to start analyzing customer feedback"}
                 </CardDescription>
               </CardHeader>
               {!isProcessing && (
@@ -289,7 +347,7 @@ export default function DashboardPage() {
                     className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-6 py-3 rounded-lg font-medium hover:bg-primary/90 transition-colors glow-primary"
                   >
                     <Upload className="w-4 h-4" />
-                    Upload Review Data
+                    Upload Amazon Reviews
                   </button>
                 </CardContent>
               )}

@@ -5,7 +5,8 @@ import type React from "react"
 import { useState, useCallback } from "react"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { Upload, FileSpreadsheet, X } from "lucide-react"
+import { Upload, FileSpreadsheet, X, Info } from "lucide-react"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 
 interface UploadModalProps {
   isOpen: boolean
@@ -56,11 +57,38 @@ export function UploadModal({ isOpen, onClose, onFileUpload }: UploadModalProps)
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>Upload Review Data</DialogTitle>
           <DialogDescription>Upload an Excel file containing customer reviews for AI analysis.</DialogDescription>
         </DialogHeader>
+
+        <Alert className="mb-4">
+          <Info className="h-4 w-4" />
+          <AlertDescription>
+            <div className="space-y-2">
+              <p className="font-medium">Expected Excel Format:</p>
+              <div className="text-sm space-y-1">
+                <p>
+                  • <strong>Column A:</strong> Reviewer Name
+                </p>
+                <p>
+                  • <strong>Column E:</strong> Review Date
+                </p>
+                <p>
+                  • <strong>Column F:</strong> Rating (1-5 stars)
+                </p>
+                <p>
+                  • <strong>Column H:</strong> Review Text Detail (main review content)
+                </p>
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">
+                The system will automatically extract keywords and analyze sentiment from the "Review Text Detail"
+                column.
+              </p>
+            </div>
+          </AlertDescription>
+        </Alert>
 
         <div
           className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
@@ -77,9 +105,13 @@ export function UploadModal({ isOpen, onClose, onFileUpload }: UploadModalProps)
                 <FileSpreadsheet className="w-8 h-8" />
                 <span className="font-medium">{selectedFile.name}</span>
               </div>
+              <div className="text-sm text-muted-foreground">
+                <p>File size: {(selectedFile.size / 1024 / 1024).toFixed(2)} MB</p>
+                <p>Ready to process and analyze reviews</p>
+              </div>
               <div className="flex gap-2 justify-center">
                 <Button onClick={handleUpload} className="glow-primary">
-                  Upload & Analyze
+                  Upload & Analyze Reviews
                 </Button>
                 <Button variant="outline" onClick={() => setSelectedFile(null)}>
                   <X className="w-4 h-4 mr-2" />
@@ -104,9 +136,16 @@ export function UploadModal({ isOpen, onClose, onFileUpload }: UploadModalProps)
           )}
         </div>
 
-        <div className="text-xs text-muted-foreground">
-          <p>Supported formats: .xlsx, .xls</p>
-          <p>Your data is processed locally in your browser for privacy.</p>
+        <div className="text-xs text-muted-foreground space-y-1">
+          <p>
+            <strong>Supported formats:</strong> .xlsx, .xls
+          </p>
+          <p>
+            <strong>Processing:</strong> Keywords extracted, sentiment analyzed, insights generated
+          </p>
+          <p>
+            <strong>Privacy:</strong> Your data is processed locally in your browser for security.
+          </p>
         </div>
       </DialogContent>
     </Dialog>
